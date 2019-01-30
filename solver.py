@@ -41,10 +41,11 @@ def floodfill_adjacent_nodes(node, color):
 def mouse_button_one(event):
     global canvas
     global selected_color
-    print('left mouse button clicked at', event.x, event.y)
     elements_tuple = canvas.find_closest(event.x, event.y)
     if len(elements_tuple) < 1:
         return
+
+    print('left mouse button clicked at', event.x, event.y, 'element id', elements_tuple[0])
     if selected_color:
         e = elements_tuple[0]
         node = find_node_by_canvas_id(e)
@@ -144,6 +145,36 @@ def create_nodes(polygons, board_config):
     return nodes
 
 
+def node_in_group(node, color_groups):
+    for group in color_groups:
+        if node in group:
+            return True
+    return False
+
+def get_color_groups():
+    global nodes
+    result = []
+    for row in nodes:
+        for node in row:
+            if node.color == 0xffffff:
+                continue
+            if node_in_group(node, result):
+                continue               
+            group = []
+            stack = [node]
+            while stack:
+                current = stack.pop()
+                if current not in group:
+                    group.append(current)
+                for n in current.neighbors:
+                    if n and n not in group:
+                        if n.color == current.color and n not in stack:
+                            stack.append(n)
+            result.append(group)
+    return result
+
+
+
 selected_color = None
 selected_node = None
 board_config = None
@@ -155,6 +186,7 @@ master.bind('<q>', gui_close)
 master.bind('<r>', board_reset)
 master.bind('<Button-1>', mouse_button_one)
 master.bind('<Button-2>', mouse_button_two)
+master.bind('<Button-3>', mouse_button_two)
 polygons = board.draw_board(0,0,canvas)
 if len(sys.argv) > 1:
     board_config = board_put_colors(polygons, canvas, sys.argv[1])
@@ -164,4 +196,8 @@ else:
         for p, shape in row:
             board_config[p] = int(canvas.itemcget(p, 'fill')[1:], 16)
 nodes = create_nodes(polygons, board_config)
+groups = get_color_groups()
+print('count of groups', len(groups))
+for g in groups:
+    print(len(g))
 master.mainloop()
