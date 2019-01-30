@@ -10,6 +10,7 @@ import colorsys
 import board
 from constants import *
 from colors import *
+import time
 
 def gui_close(event):
     sys.exit(0)
@@ -21,6 +22,18 @@ def board_reset(event):
     for k,v in board_config.items():
         canvas.itemconfig(k, fill='#%06x' % v)
 
+def floodfill_adjacent_nodes(node, color):
+    global canvas
+    global master
+    if node.color == color:
+        return
+    current_color = node.color
+    node.color = color
+    canvas.itemconfig(node.canvas_id, fill='#%06x' % color)
+    for n in node.neighbors:
+        if n and n.color == current_color:
+            master.after(50, floodfill_adjacent_nodes, n, color)
+
 def mouse_button_one(event):
     global canvas
     global selected_color
@@ -30,8 +43,10 @@ def mouse_button_one(event):
         return
     if selected_color:
         e = elements_tuple[0]
-        canvas.itemconfig(e, fill=selected_color)
-        print('setting color to %s for element %d' % (selected_color, e))
+        node = find_node_by_canvas_id(e)
+        if node:
+            print('floodfill =))')
+            floodfill_adjacent_nodes(node, selected_color)
 
 def mouse_button_two(event):
     global canvas
@@ -40,8 +55,8 @@ def mouse_button_two(event):
     elements_tuple = canvas.find_closest(event.x, event.y)
     if len(elements_tuple) < 1:
         return
-    selected_color = canvas.itemcget(elements_tuple[0], 'fill')
-    print('selected color is now', selected_color)
+    selected_color = int(canvas.itemcget(elements_tuple[0], 'fill')[1:], 16)
+    print('selected color is now #%06x' % selected_color)
 
 def board_put_colors(polygons, canvas, filename):
     img = cv2.imread(filename)
@@ -51,7 +66,7 @@ def board_put_colors(polygons, canvas, filename):
     if not pc:
         return None
     for row in polygons:
-        for p in row:
+        for p, shape in row:
             coords = [ceil(x * scale_factor / 2) for x in canvas.coords(p)]
             xm = (coords[0] + coords[2]) / 2
             ym = (coords[1] + coords[3]) / 2
@@ -74,7 +89,58 @@ def board_put_colors(polygons, canvas, filename):
             res[p] = c
     return res
 
+class node:
+    def __init__ (self, canvas_id, shape, color):
+        self.canvas_id = canvas_id
+        self.shape = shape
+        self.color = color
+        self.neighbors = [None, None, None]
+
+def find_node_by_canvas_id(canvas_id):
+    global nodes
+    for row in nodes:
+        for node in row:
+            if node.canvas_id == canvas_id:
+                return node
+    return None
+
+def create_nodes(polygons, board_config):
+    nodes = []
+    for row in polygons:
+        node_row = []
+        for p, shape in row:
+            node_row.append(node(p, shape, board_config[p]))
+        nodes.append(node_row)
+    gt = ['gt', 'gtth', 'gtbh']
+    lt = ['lt', 'ltth', 'ltbh']
+    i = 0
+    while i < len(nodes):
+        j = 0
+        while j < len(nodes[i]):
+            n = nodes[i][j]
+            if n.shape in gt:
+                if j > 0:
+                    n.neighbors[0] = nodes[i][j-1]
+                if n.shape is not 'gtbh':                  #only in top row, no above neighbor
+                    n.neighbors[1] = nodes[i-1][j]
+                if n.shape is not 'gtth':                  #only in bottom row, no bottom neighbor
+                    n.neighbors[2] = nodes[i+1][j]
+            elif n.shape in lt:
+                if n.shape is not 'ltbh':                  #only in top row, no top neighbor
+                    n.neighbors[0] = nodes[i-1][j]
+                if j + 1 < len(nodes[i]):
+                    n.neighbors[1] = nodes[i][j+1]
+                if n.shape is not 'ltth':                  #only in bottom row, no bottom neighbor
+                    n.neighbors[2] = nodes[i+1][j]
+            else:
+                print('wtf', n.shape)
+            j += 1
+        i += 1
+    return nodes
+
+
 selected_color = None
+selected_node = None
 board_config = None
 master = Tk()
 canvas = Canvas(master, width=canvas_width, height=canvas_height, bg=canvas_bg_color, borderwidth=0, highlightthickness=0)
@@ -90,8 +156,7 @@ if len(sys.argv) > 1:
 else:
     board_config = {}
     for row in polygons:
-        for p in row:
+        for p, shape in row:
             board_config[p] = int(canvas.itemcget(p, 'fill')[1:], 16)
-
-
+nodes = create_nodes(polygons, board_config)
 master.mainloop()

@@ -5,9 +5,9 @@ def top_row0(x0,y0,canvas):
     res = []
     for _ in range(5):
         gtbh = polygon_gtbh(x0,y0)
-        res.append(draw_polygon(canvas, gtbh))
+        res.append((draw_polygon(canvas, gtbh), 'gtbh'))
         ltbh = polygon_ltbh(gtbh[2],gtbh[3])
-        res.append(draw_polygon(canvas, ltbh))
+        res.append((draw_polygon(canvas, ltbh), 'ltbh'))
         x0, y0 = ltbh[2],ltbh[3]
     return res
 
@@ -15,9 +15,9 @@ def odd_row1(x0,y0,canvas):
     res = []
     for _ in range(5):
         lt = polygon_lt(x0,y0)
-        res.append(draw_polygon(canvas, lt))
+        res.append((draw_polygon(canvas, lt), 'lt'))
         gt = polygon_gt(lt[2],lt[3])
-        res.append(draw_polygon(canvas, gt))
+        res.append((draw_polygon(canvas, gt), 'gt'))
         x0, y0 = gt[2],gt[3]
     return res
 
@@ -25,9 +25,9 @@ def even_row2(x0,y0,canvas):
     res = []
     for _ in range(5):
         gt = polygon_gt(x0,y0)
-        res.append(draw_polygon(canvas, gt))
+        res.append((draw_polygon(canvas, gt), 'gt'))
         lt = polygon_lt(gt[2],gt[3])
-        res.append(draw_polygon(canvas, lt))
+        res.append((draw_polygon(canvas, lt), 'lt'))
         x0,y0 = lt[2],lt[3]
     return res
 
@@ -35,9 +35,9 @@ def bottom_row28(x0,y0,canvas):
     res = []
     for _ in range(5):
         gtth = polygon_gtth(x0,y0)
-        res.append(draw_polygon(canvas, gtth))
+        res.append((draw_polygon(canvas, gtth), 'gtth'))
         ltth = polygon_ltth(gtth[2], gtth[3])
-        res.append(draw_polygon(canvas, ltth))
+        res.append((draw_polygon(canvas, ltth), 'ltth'))
         x0,y0 = ltth[2],ltth[3]
     return res
 
