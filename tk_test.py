@@ -6,6 +6,7 @@ from random import randrange
 import numpy as np
 import cv2
 from math import ceil, sqrt
+import colorsys
 
 
 def polygon_gt(x0,y0):
@@ -126,6 +127,7 @@ def get_colors_from_file(polygons, canvas, filename):
     #expecting polygons to be a 2d array or canvas elements
 
     img = cv2.imread(filename)
+    res = []
     for row in polygons:
         for p in row:
             # coords[] = [x0,y0, x1,y1, x2,y2]
@@ -134,18 +136,22 @@ def get_colors_from_file(polygons, canvas, filename):
             # from xM,yM get distance to third corner of triangle x2,y2 and find middle
             xm = (coords[0] + coords[2]) / 2
             ym = (coords[1] + coords[3]) / 2
-            xp = (xm + coords[4]) / 2
-            yp = (ym + coords[5]) / 2
-            cl = img[int(yp)][int(xp)]
-            c = (cl[2] << 16) + (cl[1] << 8) + cl[0]
+            xp = int((xm + coords[4]) / 2)
+            yp = int((ym + coords[5]) / 2)
+
+            square = img[yp-5:yp+5, xp-5:xp+5]
+            mean = np.mean(square, axis=(0,1))
+            res.append(mean)
+            c = (int(mean[2]) << 16) + (int(mean[1]) << 8) + int(mean[0])
             canvas.itemconfig(p, fill='#%06x' % c)
+    return res
 
 
     
 
 
 
-scale_factor = 5
+scale_factor = 7
 cell_width = 225 / scale_factor
 cell_height = 259 / scale_factor
 cells_per_row = 10
@@ -161,5 +167,11 @@ master.bind('<Q>', gui_close)
 master.bind('<q>', gui_close)
 polygons = draw_board(0,0,canvas)
 if len(sys.argv) > 1:
-    get_colors_from_file(polygons, canvas, sys.argv[1])
+    mean_colors = get_colors_from_file(polygons, canvas, sys.argv[1])
+    for r,g,b in mean_colors:
+        print(colorsys.rgb_to_hls(r,g,b))
+
+
+
+
 master.mainloop()
