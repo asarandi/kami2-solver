@@ -18,9 +18,13 @@ def gui_close(event):
 def board_reset(event):
     global canvas
     global board_config
+    global nodes
     print('resetting board to original colors')
     for k,v in board_config.items():
         canvas.itemconfig(k, fill='#%06x' % v)
+    for row in nodes:
+        for node in row:
+            node.color = node.color_copy
 
 def floodfill_adjacent_nodes(node, color):
     global canvas
@@ -94,6 +98,7 @@ class node:
         self.canvas_id = canvas_id
         self.shape = shape
         self.color = color
+        self.color_copy = color #for resetting board to original state
         self.neighbors = [None, None, None]
 
 def find_node_by_canvas_id(canvas_id):

@@ -1,4 +1,4 @@
-scale_factor = 4
+scale_factor = 5
 cell_width = 225 / scale_factor
 cell_height = 259 / scale_factor
 cells_per_row = 10
