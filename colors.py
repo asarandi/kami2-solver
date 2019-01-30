@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-import sys
 import cv2
 import numpy as np
-from colormath.color_diff import delta_e_cie2000
+from colormath.color_diff import delta_e_cmc
 from colormath.color_conversions import convert_color
 from colormath.color_objects import sRGBColor, LabColor
 
@@ -12,9 +11,9 @@ def rgbi(lst):
 def color_distance(c1,c2):
     lab1 = convert_color(sRGBColor(*c1), LabColor)
     lab2 = convert_color(sRGBColor(*c2), LabColor)
-    d = delta_e_cie2000(lab1,lab2)
-    print('hexcodes: #%06x, #%06x' % (rgbi(c1), rgbi(c2)))
-    print('delta_e_cie2000', d)
+    d = delta_e_cmc(lab1,lab2) / 10 # XXX
+#    print('hexcodes: #%06x, #%06x' % (rgbi(c1), rgbi(c2)))
+#    print('delta_e_cmc', d)
     return d
 
 def count_colors(img):
@@ -45,6 +44,13 @@ def count_colors(img):
     print('failed to detect number of colors')
     return None
 
-if len(sys.argv) == 2:
-    img = cv2.imread(sys.argv[1])
-    print(count_colors(img))
+def get_puzzle_colors(img):
+    count = count_colors(img)
+    if not count:
+        return None
+    res = []
+    bar = img[1901:,450:]
+    w = 675 // count
+    for i in range(count):
+        res.append(np.mean(bar[:, i*w:i*w+w], axis=(0,1)))
+    return res    
