@@ -14,43 +14,42 @@ from colors import *
 def gui_close(event):
     sys.exit(0)
 
-#def get_colors_from_file(polygons, canvas, filename):
-#    #expecting polygons to be a 2d array or canvas elements
-#
-#    img = cv2.imread(filename)
-#    res = []
-#    for row in polygons:
-#        for p in row:
-#            # coords[] = [x0,y0, x1,y1, x2,y2]
-#            coords = [ceil(x * scale_factor / 2) for x in canvas.coords(p)]
-#            # get distance between x0,y0 and x1,y1 and find middle xM,yM
-#            # from xM,yM get distance to third corner of triangle x2,y2 and find middle
-#            xm = (coords[0] + coords[2]) / 2
-#            ym = (coords[1] + coords[3]) / 2
-#            xp = int((xm + coords[4]) / 2)
-#            yp = int((ym + coords[5]) / 2)
-#
-#            square = img[yp-5:yp+5, xp-5:xp+5]
-#            mean = np.mean(square, axis=(0,1))
-#            res.append(mean)
-#            c = (int(mean[2]) << 16) + (int(mean[1]) << 8) + int(mean[0])
-#            canvas.itemconfig(p, fill='#%06x' % c)
-#    return res
-
-def mouse_click(event):
+def board_reset(event):
     global canvas
-    print('clicked at', event.x, event.y)
-    print(canvas.find_closest(event.x, event.y))
+    global board_config
+    print('resetting board to original colors')
+    for k,v in board_config.items():
+        canvas.itemconfig(k, fill='#%06x' % v)
 
+def mouse_button_one(event):
+    global canvas
+    global selected_color
+    print('left mouse button clicked at', event.x, event.y)
+    elements_tuple = canvas.find_closest(event.x, event.y)
+    if len(elements_tuple) < 1:
+        return
+    if selected_color:
+        e = elements_tuple[0]
+        canvas.itemconfig(e, fill=selected_color)
+        print('setting color to %s for element %d' % (selected_color, e))
+
+def mouse_button_two(event):
+    global canvas
+    global selected_color
+    print('right mouse button clicked at', event.x, event.y)
+    elements_tuple = canvas.find_closest(event.x, event.y)
+    if len(elements_tuple) < 1:
+        return
+    selected_color = canvas.itemcget(elements_tuple[0], 'fill')
+    print('selected color is now', selected_color)
 
 def board_put_colors(polygons, canvas, filename):
     img = cv2.imread(filename)
     blank = cv2.imread('blank.png')
-    pc = get_puzzle_colors(img)    
+    pc = get_puzzle_colors(img)
+    res = {}
     if not pc:
         return None
-#    for choice in pc:
-#        print('choice #%06x' % rgbi(choice))
     for row in polygons:
         for p in row:
             coords = [ceil(x * scale_factor / 2) for x in canvas.coords(p)]
@@ -66,44 +65,33 @@ def board_put_colors(polygons, canvas, filename):
             for candidate in pc:
                 color_choices.append((color_distance(candidate, square_color), candidate))
             color_choices.sort()
-#            why = [1,10]
-#            if p in why:
-#                print('square', square)
-#                print('square color', square_color, '#%06x' % rgbi(square_color))
-#                for similarity, color in color_choices:
-#                    print('similarity', similarity, 'color #%06x' % rgbi(color))
-#                print('color_choices', color_choices)
-
             blank_similarity = color_distance(blank_color, square_color)
-
-#            if p in why:
-#                print('blank similarity', blank_similarity)
-            if blank_similarity < 1: #color_choices[0][0]:
-#                print('blank similarity', blank_similarity)
+            if blank_similarity < 1:
                 c = 0xffffff
             else:
                 c = rgbi(color_choices[0][1])
-
-
-
-#            res.append(mean)
-#            c = (int(mean[2]) << 16) + (int(mean[1]) << 8) + int(mean[0])
             canvas.itemconfig(p, fill='#%06x' % c)
+            res[p] = c
+    return res
 
+selected_color = None
+board_config = None
 master = Tk()
 canvas = Canvas(master, width=canvas_width, height=canvas_height, bg=canvas_bg_color, borderwidth=0, highlightthickness=0)
 canvas.pack()
 master.bind('<Q>', gui_close)
 master.bind('<q>', gui_close)
-master.bind('<Button-1>', mouse_click)
+master.bind('<r>', board_reset)
+master.bind('<Button-1>', mouse_button_one)
+master.bind('<Button-2>', mouse_button_two)
 polygons = board.draw_board(0,0,canvas)
 if len(sys.argv) > 1:
-#    mean_colors = get_colors_from_file(polygons, canvas, sys.argv[1])
-    board_put_colors(polygons, canvas, sys.argv[1])
-#    for r,g,b in mean_colors:
-#        print(colorsys.rgb_to_hls(r,g,b))
-
-
+    board_config = board_put_colors(polygons, canvas, sys.argv[1])
+else:
+    board_config = {}
+    for row in polygons:
+        for p in row:
+            board_config[p] = int(canvas.itemcget(p, 'fill')[1:], 16)
 
 
 master.mainloop()
