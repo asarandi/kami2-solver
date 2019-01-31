@@ -15,15 +15,15 @@ def gui_close(event):
     sys.exit(0)
 
 def board_reset(event):
-    global canvas
-    global board_config
-    global nodes
+    global canvas, board_config
+    global nodes, solution_index
     print('resetting board to original colors')
     for k,v in board_config.items():
         canvas.itemconfig(k, fill='#%06x' % v)
     for row in nodes:
         for node in row:
             node.color = node.color_copy
+    solution_index = 0
 
 def floodfill_adjacent_nodes(node, color):
     global canvas
@@ -156,7 +156,7 @@ def get_color_set():
 def run_solver():
     global nodes
     colors = get_color_set()
-    print(colors)
+    print('puzzle_colors', colors)
     solver_input = []
     for row in nodes:
         for node in row:
@@ -165,6 +165,33 @@ def run_solver():
             else:
                 solver_input.append(colors.index(node.color))
     return solver.search(solver_input)
+
+def solution_replay_previous(event):
+    global starting_cell, puzzle_solution, canvas
+    global solution_index, puzzle_colors, nodes
+    if solution_index > 0:
+        solution_index -= 1
+        board = puzzle_solution[solution_index]
+        for i, val in enumerate(board):
+            if val != -1:
+                node = nodes[i//10][i%10]
+                node.color = puzzle_colors[val]
+                canvas.itemconfig(node.canvas_id, fill='#%06x' % node.color)            
+    else:
+        print('no previous frames')
+
+
+def solution_replay_next(event):
+    global starting_cell, puzzle_solution
+    global solution_index, puzzle_colors, nodes
+    if solution_index < len(puzzle_solution) - 1:
+        solution_index += 1
+        node = nodes[starting_cell // 10][starting_cell % 10]
+        board = puzzle_solution[solution_index]
+        selected_color = puzzle_colors[board[starting_cell]]
+        floodfill_adjacent_nodes(node, selected_color)
+    else:
+        print('no next frames')
 
 blank_color = 0xffffff
 selected_color = None
@@ -176,6 +203,8 @@ canvas.pack()
 master.bind('<Q>', gui_close)
 master.bind('<q>', gui_close)
 master.bind('<r>', board_reset)
+master.bind('<a>', solution_replay_previous)
+master.bind('<d>', solution_replay_next)
 master.bind('<Button-1>', mouse_button_one)
 master.bind('<Button-2>', mouse_button_two)
 master.bind('<Button-3>', mouse_button_two)
@@ -188,5 +217,7 @@ else:
         for p, shape in row:
             board_config[p] = int(canvas.itemcget(p, 'fill')[1:], 16)
 nodes = create_nodes(polygons, board_config)
-run_solver()
+starting_cell, puzzle_solution = run_solver()
+solution_index = 0
+puzzle_colors = get_color_set()
 master.mainloop()

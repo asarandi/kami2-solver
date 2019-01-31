@@ -170,16 +170,21 @@ def a_star_search(root, idx, max_g):
 
 def search(root):
     groups = get_groups(root)
+    print('number of color groups', len(groups))
     max_g = inf
     result = None
+    start_idx = None
     for group in groups:
         steps = a_star_search(root, group[0], max_g)
         if steps and len(steps) < max_g:
+            start_idx = group[0]
             max_g = len(steps)
             result = steps
             print('found solution of length', max_g - 1)    # minus one because includes root
     for step in result:
         print_board_color(step)
-    return result
+    print('solution of length', len(result) - 1)
+    result.reverse()
+    return start_idx, result
 
 
