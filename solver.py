@@ -1,203 +1,145 @@
-#!/usr/bin/env python3
+#IMG_0030.PNG
+#[13406508, 1077101, 9904953]
+#[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 2, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 2, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 2, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
+#
 
-from tkinter import *
-import sys
-from random import randrange
-import numpy as np
-import cv2
-from math import ceil, sqrt
-import colorsys
-import board
-from constants import *
-from colors import *
-import time
+from heapq import heappush, heappop
+from copy import deepcopy
 
-def gui_close(event):
-    sys.exit(0)
+cells_per_row = 10
+cells_per_column = 29
+board_size = cells_per_row * cells_per_column
+blank_idx = -1
 
-def board_reset(event):
-    global canvas
-    global board_config
-    global nodes
-    print('resetting board to original colors')
-    for k,v in board_config.items():
-        canvas.itemconfig(k, fill='#%06x' % v)
-    for row in nodes:
-        for node in row:
-            node.color = node.color_copy
+neighbors = []
+for idx in range(board_size):
+    #even rows: gt, lt, gt, lt ..
+    #odd rows: lt, gt
+    adjacent = []
+    row = idx // cells_per_row
+    col = idx % cells_per_row
+    if row % 2 == col % 2:  #gt
+        if col > 0:
+            adjacent.append(idx-1)  #left neighbor
+        if row > 0:
+            adjacent.append(idx-cells_per_row)  #above
+        if row + 1 < cells_per_column:
+            adjacent.append(idx+cells_per_row)  #below
+    else:   #lt
+        if row > 0:
+            adjacent.append(idx-cells_per_row)  #above
+        if col + 1 < cells_per_row: #right neighbor
+            adjacent.append(idx+1)
+        if row + 1 < cells_per_column:  #below
+            adjacent.append(idx+cells_per_row)
+    neighbors.append(adjacent)
 
-def floodfill_adjacent_nodes(node, color):
-    global canvas
-    global master
-    if node.color == color:
-        return
-    current_color = node.color
-    node.color = color
-    canvas.itemconfig(node.canvas_id, fill='#%06x' % color)
-    for n in node.neighbors:
-        if n and n.color == current_color:
-            master.after(50, floodfill_adjacent_nodes, n, color)
-
-def mouse_button_one(event):
-    global canvas
-    global selected_color
-    elements_tuple = canvas.find_closest(event.x, event.y)
-    if len(elements_tuple) < 1:
-        return
-
-    print('left mouse button clicked at', event.x, event.y, 'element id', elements_tuple[0])
-    if selected_color:
-        e = elements_tuple[0]
-        node = find_node_by_canvas_id(e)
-        if node:
-            print('floodfill =))')
-            floodfill_adjacent_nodes(node, selected_color)
-
-def mouse_button_two(event):
-    global canvas
-    global selected_color
-    print('right mouse button clicked at', event.x, event.y)
-    elements_tuple = canvas.find_closest(event.x, event.y)
-    if len(elements_tuple) < 1:
-        return
-    selected_color = int(canvas.itemcget(elements_tuple[0], 'fill')[1:], 16)
-    print('selected color is now #%06x' % selected_color)
-
-def board_put_colors(polygons, canvas, filename):
-    img = cv2.imread(filename)
-    blank = cv2.imread('blank.png')
-    pc = get_puzzle_colors(img)
-    res = {}
-    if not pc:
-        return None
-    for row in polygons:
-        for p, shape in row:
-            coords = [ceil(x * scale_factor / 2) for x in canvas.coords(p)]
-            xm = (coords[0] + coords[2]) / 2
-            ym = (coords[1] + coords[3]) / 2
-            xp = int((xm + coords[4]) / 2)
-            yp = int((ym + coords[5]) / 2)
-            square = img[yp-5:yp+5, xp-5:xp+5]
-            square_color = np.mean(square, axis=(0,1))
-            blank_square = blank[yp-5:yp+5, xp-5:xp+5]
-            blank_color = np.mean(blank_square, axis=(0,1))
-            color_choices = []
-            for candidate in pc:
-                color_choices.append((color_distance(candidate, square_color), candidate))
-            color_choices.sort()
-            blank_similarity = color_distance(blank_color, square_color)
-            if blank_similarity < 1:
-                c = 0xffffff
-            else:
-                c = rgbi(color_choices[0][1])
-            canvas.itemconfig(p, fill='#%06x' % c)
-            res[p] = c
-    return res
-
-class node:
-    def __init__ (self, canvas_id, shape, color):
-        self.canvas_id = canvas_id
-        self.shape = shape
-        self.color = color
-        self.color_copy = color #for resetting board to original state
-        self.neighbors = [None, None, None]
-
-def find_node_by_canvas_id(canvas_id):
-    global nodes
-    for row in nodes:
-        for node in row:
-            if node.canvas_id == canvas_id:
-                return node
-    return None
-
-def create_nodes(polygons, board_config):
-    nodes = []
-    for row in polygons:
-        node_row = []
-        for p, shape in row:
-            node_row.append(node(p, shape, board_config[p]))
-        nodes.append(node_row)
-    gt = ['gt', 'gtth', 'gtbh']
-    lt = ['lt', 'ltth', 'ltbh']
-    i = 0
-    while i < len(nodes):
-        j = 0
-        while j < len(nodes[i]):
-            n = nodes[i][j]
-            if n.shape in gt:
-                if j > 0:
-                    n.neighbors[0] = nodes[i][j-1]
-                if n.shape is not 'gtbh':                  #only in top row, no above neighbor
-                    n.neighbors[1] = nodes[i-1][j]
-                if n.shape is not 'gtth':                  #only in bottom row, no bottom neighbor
-                    n.neighbors[2] = nodes[i+1][j]
-            elif n.shape in lt:
-                if n.shape is not 'ltbh':                  #only in top row, no top neighbor
-                    n.neighbors[0] = nodes[i-1][j]
-                if j + 1 < len(nodes[i]):
-                    n.neighbors[1] = nodes[i][j+1]
-                if n.shape is not 'ltth':                  #only in bottom row, no bottom neighbor
-                    n.neighbors[2] = nodes[i+1][j]
-            else:
-                print('wtf', n.shape)
-            j += 1
-        i += 1
-    return nodes
-
-
-def node_in_group(node, color_groups):
-    for group in color_groups:
-        if node in group:
+def is_in_group(idx, groups):
+    for group in groups:
+        if idx in group:
             return True
     return False
 
-def get_color_groups():
-    global nodes
+def get_groups(board):
     result = []
-    for row in nodes:
-        for node in row:
-            if node.color == 0xffffff:
-                continue
-            if node_in_group(node, result):
-                continue               
-            group = []
-            stack = [node]
-            while stack:
-                current = stack.pop()
-                if current not in group:
-                    group.append(current)
-                for n in current.neighbors:
-                    if n and n not in group:
-                        if n.color == current.color and n not in stack:
-                            stack.append(n)
-            result.append(group)
+    for i, val in enumerate(board):
+        if val == blank_idx:
+            continue
+        if is_in_group(i, result):
+            continue
+        group = []
+        stack = [i]
+        while stack:
+            current = stack.pop()
+            if current not in group:
+                group.append(current)
+            for n in neighbors[current]:
+                if n not in group:
+                    if board[n] == board[current]:
+                        stack.append(n)
+        result.append(group)
+    return result
+
+def get_color_set(board):
+    result = []
+    for i, val in enumerate(board):
+        if val != blank_idx:
+            if val not in result:
+                result.append(val)
+    return result
+
+def is_game_over(board):
+    return False if len(get_color_set(board)) > 1 else True
+
+def get_moves(board):
+    result = []
+    groups = get_groups(board)
+    color_set = get_color_set(board)
+    for group in groups:
+        for color in color_set:
+            if color != board[group[0]]:
+                clone = deepcopy(board)
+                for i in group:
+                    clone[i] = color
+                result.append(clone)
     return result
 
 
+color_names = ['red2',      'green2',       'yellow2',      'blue2',        'magenta2',     'cyan2',        'white2']
+color_codes = ['\033[1;31m','\033[1;32m',   '\033[1;33m',   '\033[1;34m',   '\033[1;35m',   '\033[1;36m',   '\033[1;37m']
 
-selected_color = None
-selected_node = None
-board_config = None
-master = Tk()
-canvas = Canvas(master, width=canvas_width, height=canvas_height, bg=canvas_bg_color, borderwidth=0, highlightthickness=0)
-canvas.pack()
-master.bind('<Q>', gui_close)
-master.bind('<q>', gui_close)
-master.bind('<r>', board_reset)
-master.bind('<Button-1>', mouse_button_one)
-master.bind('<Button-2>', mouse_button_two)
-master.bind('<Button-3>', mouse_button_two)
-polygons = board.draw_board(0,0,canvas)
-if len(sys.argv) > 1:
-    board_config = board_put_colors(polygons, canvas, sys.argv[1])
-else:
-    board_config = {}
-    for row in polygons:
-        for p, shape in row:
-            board_config[p] = int(canvas.itemcget(p, 'fill')[1:], 16)
-nodes = create_nodes(polygons, board_config)
-groups = get_color_groups()
-print('count of groups', len(groups))
-for g in groups:
-    print(len(g))
-master.mainloop()
+def cc(idx):
+    return color_codes[idx] + 'o' + '\033[0;00m';
+def print_board_color(board):    
+    cpr = cells_per_row
+    for i in range(cells_per_column):
+        row = board[i*cpr:i*cpr+cpr]
+        for cell in row:
+            print(cc(cell), end=' ')
+        print()
+    print('-----------------------------------------')
+
+#,'eoc','black','red','green','yellow','blue','magenta','cyan','white']
+#,'\033[0;00m','\033[0;30m','\033[0;31m','\033[0;32m','\033[0;33m','\033[0;34m','\033[0;35m','\033[0;36m','\033[0;37m']
+
+def print_board(board):
+    cpr = cells_per_row
+    for i in range(cells_per_column):
+        print(board[i*cpr:i*cpr+cpr])
+    print('-----------------------------------------')
+    
+
+def search(root):
+#    print(len(root))
+#    print(root)
+#    print(neighbors)
+#    groups = get_groups(root)
+#    print('count of groups', len(groups))
+#    for g in groups:
+#        print(len(g))
+#    moves = get_moves(root)
+#    for m in moves:
+#        print_board(m)
+#        print()
+
+    queue = [(0, 0, tuple(root), None)]
+    closed_set = {}
+    enqueued = {}
+    while queue:
+        f, g, current, parent = heappop(queue)
+        if is_game_over(current):
+            print_board_color(current)
+            while parent:
+                print_board_color(parent)
+                parent = closed_set[parent]
+            return 'done'
+        if current in closed_set:
+            continue
+        closed_set[current] = parent
+        moves = get_moves(list(current))
+        for m in moves:
+            if tuple(m) in closed_set:
+                continue
+            mf = g + 1 + len(get_color_set(m))
+            heappush(queue, (mf, g + 1, tuple(m), current))
+    return 'solution not found'
