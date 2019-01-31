@@ -3,7 +3,6 @@
 #[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 2, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 2, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 2, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
 #
 
-from math import inf
 from heapq import heappush, heappop
 from copy import deepcopy
 
@@ -109,54 +108,41 @@ def print_board(board):
     for i in range(cells_per_column):
         print(board[i*cpr:i*cpr+cpr])
     print('-----------------------------------------')
+    
 
-def floodfill(board, idx, color):
-    group = []
-    stack = [idx]
-    while stack:
-        current = stack.pop()
-        if current not in group:
-            group.append(current)
-        for n in neighbors[current]:
-            if n not in group:
-                if board[n] == board[current]:
-                    stack.append(n)
-    result = list(board)
-    for i in group:
-        result[i] = color
-    return tuple(result)
+def search(root):
+#    print(len(root))
+#    print(root)
+#    print(neighbors)
+#    groups = get_groups(root)
+#    print('count of groups', len(groups))
+#    for g in groups:
+#        print(len(g))
+#    moves = get_moves(root)
+#    for m in moves:
+#        print_board(m)
+#        print()
 
-def get_moves_idx(board, idx):
-    result = []
-    color_set = get_color_set(board)
-    for color in color_set:
-        if color != board[idx]:
-            result.append(floodfill(board, idx, color))
-    return result
-
-def a_star_search(root, idx, max_g):
-    queue = [(0, 0, tuple(root), None)]
+    queue = [(0, len(get_groups(root)), 0, tuple(root), None)]
+    print('number of groups', queue[0][1])
     closed_set = {}
     enqueued = set()
-    saved_g = 0
+    saved_g = -1
     while queue:
-        f, g, current, parent = heappop(queue)
-#        if g > saved_g:
-#            print('current g', g, 'len closed_set', len(closed_set), 'len queue', len(queue))
-#            saved_g = g
-        if g + len(get_color_set(current)) -1 > max_g:
-            return None
+        f, len_groups, g, current, parent = heappop(queue)
+        if g > saved_g:
+            print('current g', g, 'len closed_set', len(closed_set), 'len queue', len(queue))
+            saved_g = g
         if is_game_over(current):
-            result = []
-            result.append(current)
+            print_board_color(current)
             while parent:
-                result.append(parent)
+                print_board_color(parent)
                 parent = closed_set[parent]
-            return result
+            return 'done'
         if current in closed_set:
             continue
         closed_set[current] = parent
-        moves = get_moves_idx(current, idx)
+        moves = get_moves(list(current))
         for m in moves:
             if m in closed_set:
                 continue
@@ -165,21 +151,6 @@ def a_star_search(root, idx, max_g):
             enqueued.add(m)
             groups = get_groups(m)
             mf = (g + 1 + len(get_color_set(m))) * 1000 + len(groups)
-            heappush(queue, (mf, g + 1, m, current))
-    return None
 
-def search(root):
-    groups = get_groups(root)
-    max_g = inf
-    result = None
-    for group in groups:
-        steps = a_star_search(root, group[0], max_g)
-        if steps and len(steps) < max_g:
-            max_g = len(steps)
-            result = steps
-            print('found solution of length', max_g - 1)    # minus one because includes root
-    for step in result:
-        print_board_color(step)
-    return result
-
-
+            heappush(queue, (mf, len(groups), g + 1, m, current))
+    return 'solution not found'
