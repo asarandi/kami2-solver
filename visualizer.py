@@ -3,12 +3,11 @@
 from tkinter import *
 import sys
 import numpy as np
-import cv2
+from PIL import Image
 from math import ceil, sqrt
-import colorsys
 import board
-from constants import *
-from colors import *
+from .constants import *
+from .colors import *
 import solver
 
 def gui_close(event):
@@ -70,8 +69,8 @@ def mouse_button_two(event):
     print('selected color is now #%06x' % selected_color)
 
 def board_put_colors(polygons, canvas, filename):
-    img = cv2.imread(filename)
-    blank = cv2.imread('blank.png')
+    img = np.array(Image.open(filename))
+    blank = np.array(Image.open('blank.png'))
     pc = get_puzzle_colors(img)
     res = {}
     if not pc:
@@ -193,31 +192,33 @@ def solution_replay_next(event):
     else:
         print('no next frames')
 
-blank_color = 0xffffff
-selected_color = None
-selected_node = None
-board_config = None
-master = Tk()
-canvas = Canvas(master, width=canvas_width, height=canvas_height, bg=canvas_bg_color, borderwidth=0, highlightthickness=0)
-canvas.pack()
-master.bind('<Q>', gui_close)
-master.bind('<q>', gui_close)
-master.bind('<r>', board_reset)
-master.bind('<a>', solution_replay_previous)
-master.bind('<d>', solution_replay_next)
-master.bind('<Button-1>', mouse_button_one)
-master.bind('<Button-2>', mouse_button_two)
-master.bind('<Button-3>', mouse_button_two)
-polygons = board.draw_board(0,0,canvas)
-if len(sys.argv) > 1:
-    board_config = board_put_colors(polygons, canvas, sys.argv[1])
-else:
-    board_config = {}
-    for row in polygons:
-        for p, shape in row:
-            board_config[p] = int(canvas.itemcget(p, 'fill')[1:], 16)
-nodes = create_nodes(polygons, board_config)
-starting_cell, puzzle_solution = run_solver()
-solution_index = 0
-puzzle_colors = get_color_set()
-master.mainloop()
+
+if __name__ == '__main__':
+    blank_color = 0xffffff
+    selected_color = None
+    selected_node = None
+    board_config = None
+    master = Tk()
+    canvas = Canvas(master, width=canvas_width, height=canvas_height, bg=canvas_bg_color, borderwidth=0, highlightthickness=0)
+    canvas.pack()
+    master.bind('<Q>', gui_close)
+    master.bind('<q>', gui_close)
+    master.bind('<r>', board_reset)
+    master.bind('<a>', solution_replay_previous)
+    master.bind('<d>', solution_replay_next)
+    master.bind('<Button-1>', mouse_button_one)
+    master.bind('<Button-2>', mouse_button_two)
+    master.bind('<Button-3>', mouse_button_two)
+    polygons = board.draw_board(0,0,canvas)
+    if len(sys.argv) > 1:
+        board_config = board_put_colors(polygons, canvas, sys.argv[1])
+    else:
+        board_config = {}
+        for row in polygons:
+            for p, shape in row:
+                board_config[p] = int(canvas.itemcget(p, 'fill')[1:], 16)
+    nodes = create_nodes(polygons, board_config)
+    starting_cell, puzzle_solution = run_solver()
+    solution_index = 0
+    puzzle_colors = get_color_set()
+    master.mainloop()

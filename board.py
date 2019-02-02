@@ -60,5 +60,3 @@ def draw_board(x0,y0,canvas):
     res.append(odd_row1(x0,y0,canvas))
     res.append(bottom_row28(x0,y0,canvas))
     return res
-
-

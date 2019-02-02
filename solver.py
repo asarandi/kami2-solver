@@ -1,39 +1,9 @@
-#IMG_0030.PNG
-#[13406508, 1077101, 9904953]
-#[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 2, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 2, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 2, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
-#
-
+from constants import *
 from math import inf
 from heapq import heappush, heappop
 from copy import deepcopy
 
-cells_per_row = 10
-cells_per_column = 29
-board_size = cells_per_row * cells_per_column
 blank_idx = -1
-
-neighbors = []
-for idx in range(board_size):
-    #even rows: gt, lt, gt, lt ..
-    #odd rows: lt, gt
-    adjacent = []
-    row = idx // cells_per_row
-    col = idx % cells_per_row
-    if row % 2 == col % 2:  #gt
-        if col > 0:
-            adjacent.append(idx-1)  #left neighbor
-        if row > 0:
-            adjacent.append(idx-cells_per_row)  #above
-        if row + 1 < cells_per_column:
-            adjacent.append(idx+cells_per_row)  #below
-    else:   #lt
-        if row > 0:
-            adjacent.append(idx-cells_per_row)  #above
-        if col + 1 < cells_per_row: #right neighbor
-            adjacent.append(idx+1)
-        if row + 1 < cells_per_column:  #below
-            adjacent.append(idx+cells_per_row)
-    neighbors.append(adjacent)
 
 def is_in_group(idx, groups):
     for group in groups:
@@ -168,7 +138,7 @@ def a_star_search(root, idx, max_g):
             heappush(queue, (mf, g + 1, m, current))
     return None
 
-def search(root):
+def search(root, limit=None):
     groups = get_groups(root)
     print('number of color groups', len(groups))
     max_g = inf
@@ -180,7 +150,9 @@ def search(root):
             start_idx = group[0]
             max_g = len(steps)
             result = steps
-            print('found solution of length', max_g - 1)    # minus one because includes root
+            print('found solution of length', max_g-1)    # minus one because includes root
+            if limit and max_g-1 <= limit:
+                break
     for step in result:
         print_board_color(step)
     print('solution of length', len(result) - 1)
