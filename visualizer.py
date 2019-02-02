@@ -6,8 +6,8 @@ import numpy as np
 from PIL import Image
 from math import ceil, sqrt
 import board
-from .constants import *
-from .colors import *
+from constants import *
+from colors import *
 import solver
 
 def gui_close(event):

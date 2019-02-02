@@ -3,8 +3,6 @@ from math import inf
 from heapq import heappush, heappop
 from copy import deepcopy
 
-blank_idx = -1
-
 def is_in_group(idx, groups):
     for group in groups:
         if idx in group:

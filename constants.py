@@ -17,6 +17,7 @@ blank_board_file = 'blank.png'
 color_sample_square = 5
 blank_distance_threshold = 1
 blank_cell_color = 0xffffff
+blank_idx = - 1
 
 #neighbors[idx] will be a list of cells adjacted to idx
 neighbors = []

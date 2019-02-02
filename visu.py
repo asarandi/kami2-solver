@@ -10,6 +10,7 @@ from colors import get_puzzle_colors as get_palette_from_image, color_distance, 
 from math import ceil
 import argparse
 import solver
+import astar
 
 def get_palette_indices_from_file(filename):
     indices = []
@@ -39,23 +40,73 @@ def get_palette_indices_from_file(filename):
             indices.append(idx)
     return palette, indices
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='kami2 solver')
-    parser.add_argument('-m', help='moves', type=int)
-    parser.add_argument('file', help='input file', type=argparse.FileType('rb'))
-    args = parser.parse_args()
-
-    master = tkinter.Tk()
-    canvas = tkinter.Canvas(master, width=canvas_width, height=canvas_height, bg=canvas_bg_color, borderwidth=0, highlightthickness=0)
-    canvas.pack()
-    polygons = draw_polygons(canvas)
-    palette, indices = get_palette_indices_from_file(args.file)
-    solver.search(indices, args.m)
-
+def board_set_colors(indices):
     for i, val in enumerate(indices):
         if val == -1:
             cell_fill = blank_cell_color
         else:
             cell_fill = rgbi(palette[val])
         canvas.itemconfig(polygons[i], fill='#%06x' % cell_fill)
+
+def floodfill_adjacent_cells(cell_idx, color_idx):
+    current_color = canvas.itemcget(polygons[cell_idx], 'fill')
+    new_color = '#%06x' % rgbi(palette[color_idx])
+    if current_color != new_color:
+        canvas.itemconfig(polygons[cell_idx], fill=new_color)
+        for n in neighbors[cell_idx]:
+            neighbor_color = canvas.itemcget(polygons[n], 'fill')
+            if neighbor_color == current_color:
+                master.after(50, floodfill_adjacent_cells, n, color_idx)
+
+def solution_next_step():
+    global solution_index
+    if solution_index + 1 < len(solution):
+        board_set_colors(solution[solution_index])
+        solution_index += 1        
+        for i in range(len(solution[solution_index])):
+            if solution[solution_index][i] != solution[solution_index-1][i]:
+                return floodfill_adjacent_cells(i, solution[solution_index][i])
+    else:
+        print('no next frame')
+
+def solution_previous_step():
+    global solution_index
+    if solution_index > 0:
+        solution_index -= 1
+        board_set_colors(solution[solution_index])
+    else:
+        print('no previous frame')
+
+def user_keyrelease(event):
+    global solution_index
+    key = event.keysym.lower()
+    if key in ['q', 'escape']:
+        sys.exit(0)
+    elif key == 'right':
+        solution_next_step()
+    elif key == 'left':
+        solution_previous_step()
+    elif key == 'r':
+        solution_index = 0
+        board_set_colors(indices)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='kami2 solver')
+    parser.add_argument('-a', help='exhaustive search', action='store_true')
+    parser.add_argument('-m', help='moves limit', type=int)
+    parser.add_argument('file', help='input file', type=argparse.FileType('rb'))
+    args = parser.parse_args()
+
+    master = tkinter.Tk()
+    canvas = tkinter.Canvas(master, width=canvas_width, height=canvas_height, bg=canvas_bg_color, borderwidth=0, highlightthickness=0)
+    canvas.pack()    
+    polygons = draw_polygons(canvas)
+    palette, indices = get_palette_indices_from_file(args.file)
+    board_set_colors(indices)
+    if args.a:
+        starting_cell, solution = astar.search(indices, args.m)
+    else:
+        starting_cell, solution = solver.search(indices, args.m)
+    solution_index = 0
+    master.bind('<KeyRelease>', user_keyrelease)
     master.mainloop()
