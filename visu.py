@@ -11,6 +11,7 @@ from math import ceil
 import argparse
 import solver
 import astar
+import search
 
 def get_palette_indices_from_file(filename):
     indices = []
@@ -104,7 +105,7 @@ if __name__ == '__main__':
     palette, indices = get_palette_indices_from_file(args.file)
     board_set_colors(indices)
     if args.a:
-        starting_cell, solution = astar.search(indices, args.m)
+        starting_cell, solution = search.search(indices, args.m)
     else:
         starting_cell, solution = solver.search(indices, args.m)
     solution_index = 0

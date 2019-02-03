@@ -72,9 +72,9 @@ def cc(color_idx, cell_idx):
     row = cell_idx // cells_per_row
     col = cell_idx % cells_per_row
     if row % 2 == col % 2:
-        c = '\u25a7'#'\u25b7'
+        c = '\u25b6'
     else:
-        c = '\u25a8'#'\u25c1'
+        c = '\u25c0'
     return color_codes[color_idx] + c + '\033[0;00m';
 
 def print_board_color(board):    

@@ -7,6 +7,9 @@ __pycache__/
 *.so
 IMG_*.PNG
 *.jpg
+SAMPLES/*
+DATA/*
+IMG/*
 
 .DS_Store
 ._*
