@@ -2,6 +2,7 @@ from constants import *
 from math import inf
 from heapq import heappush, heappop
 from copy import deepcopy
+from astar import get_groups
 
 def is_in_group(idx, groups):
     for group in groups:
@@ -9,7 +10,7 @@ def is_in_group(idx, groups):
             return True
     return False
 
-def get_groups(board):
+def aget_groups(board):
     result = []
     for i, val in enumerate(board):
         if val == blank_idx:
@@ -42,30 +43,48 @@ def is_game_over(board):
     return False if len(get_color_set(board)) > 1 else True
 
 def get_moves(board):
-    result = []
+    result1 = []
     groups = get_groups(board)
     color_set = get_color_set(board)
+    result2 = []
+
     for group in groups:
         for color in color_set:
             if color != board[group[0]]:
                 clone = deepcopy(board)
                 for i in group:
                     clone[i] = color
-                result.append(tuple(clone))
-    return result
+                if len(get_groups(clone)) < len(groups):
+                    if len(get_color_set(board)) < len(color_set):
+                        result2.append(tuple(clone))
+                    else:
+                        result1.append(tuple(clone))
+    if result2:
+        return result2
+    else:
+        return result1
 
 
 color_names = ['red2',      'green2',       'yellow2',      'blue2',        'magenta2',     'cyan2',        'white2']
 color_codes = ['\033[1;31m','\033[1;32m',   '\033[1;33m',   '\033[1;34m',   '\033[1;35m',   '\033[1;36m',   '\033[1;37m']
 
-def cc(idx):
-    return color_codes[idx] + 'o' + '\033[0;00m';
+def cc(color_idx, cell_idx):
+    row = cell_idx // cells_per_row
+    col = cell_idx % cells_per_row
+    if row % 2 == col % 2:
+        c = '\u25a7'#'\u25b7'
+    else:
+        c = '\u25a8'#'\u25c1'
+    return color_codes[color_idx] + c + '\033[0;00m';
+
 def print_board_color(board):    
     cpr = cells_per_row
+    triangle = 0
     for i in range(cells_per_column):
         row = board[i*cpr:i*cpr+cpr]
         for cell in row:
-            print(cc(cell), end=' ')
+            print(cc(cell, triangle), end=' ')
+            triangle += 1
         print()
     print('-----------------------------------------')
 
@@ -107,14 +126,17 @@ def a_star_search(root, idx, max_g):
     closed_set = {}
     enqueued = set()
     saved_g = 0
+    evaluated = 0
     while queue:
+        evaluated += 1
         f, g, current, parent = heappop(queue)
 #        if g > saved_g:
 #            print('current g', g, 'len closed_set', len(closed_set), 'len queue', len(queue))
 #            saved_g = g
-        if g + len(get_color_set(current)) -1 > max_g:
+        if g + len(get_color_set(current)) -1 >= max_g:
             return None
         if is_game_over(current):
+#            print('evaluated',evaluated,'nodes')
             result = []
             result.append(current)
             while parent:
@@ -131,7 +153,7 @@ def a_star_search(root, idx, max_g):
             if m in enqueued:
                 continue
             enqueued.add(m)
-            groups = get_groups(m)
+            groups = aget_groups(m)
             mf = (g + 1 + len(get_color_set(m))) * 1000 + len(groups)
             heappush(queue, (mf, g + 1, m, current))
     return None
