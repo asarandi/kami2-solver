@@ -62,11 +62,12 @@ def floodfill_adjacent_cells(cell_idx, color_idx):
 def solution_next_step():
     global solution_index
     if solution_index + 1 < len(solution):
+        solution_index += 1 # XXX
         board_set_colors(solution[solution_index])
-        solution_index += 1        
-        for i in range(len(solution[solution_index])):
-            if solution[solution_index][i] != solution[solution_index-1][i]:
-                return floodfill_adjacent_cells(i, solution[solution_index][i])
+#        solution_index += 1        
+#        for i in range(len(solution[solution_index])):
+#            if solution[solution_index][i] != solution[solution_index-1][i]:
+#                return floodfill_adjacent_cells(i, solution[solution_index][i])
     else:
         print('no next frame')
 

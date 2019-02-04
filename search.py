@@ -1,6 +1,7 @@
 from heapq import heappush, heappop
 from copy import deepcopy
 from constants import *
+from math import inf
 
 blank_idx = -1
 
@@ -74,8 +75,6 @@ def list_all_groups_by_color_rating(board):
 
 def get_color_options_for_each_group(board, all_groups):
     all_neighbors = make_group_neighbors_list(board, all_groups)
-#    print('all neighbors', all_neighbors)
-#    print('all groups', all_groups)
     result = []
     for i, current_group in enumerate(all_groups):
         color_options = []
@@ -87,11 +86,34 @@ def get_color_options_for_each_group(board, all_groups):
         result.append(color_options)
     return result
 
+def get_max_distance(board):
+    def distance_between_groups(root):
+        distances = [inf for x in range(len(all_neighbors))]
+        queue = [root]
+        distances[root] = 0
+        while queue:
+            current_node = queue.pop()            
+            for n in all_neighbors[current_node]:
+                if distances[n] == inf:
+                    distances[n] = distances[current_node] + 1
+                    queue.append(n)
+        return max(distances)
+    all_groups = list_all_groups_by_color_rating(board)
+    all_neighbors = make_group_neighbors_list(board, all_groups)
+    result = 0
+    for i in range(len(all_groups)):
+        dist = distance_between_groups(i)
+        if dist > result:
+            result = dist
+    return result / 100
+
 def get_moves(board):
     result1 = []
     result2 = []
+    result3 = []
     all_groups = list_all_groups_by_color_rating(board)
     board_color_counts = len(get_color_counts(board))
+    board_distance = get_max_distance(board)
     color_options = get_color_options_for_each_group(board, all_groups)
     for i, current_group in enumerate(all_groups):
         for color in color_options[i]:
@@ -101,10 +123,21 @@ def get_moves(board):
             if len(get_color_counts(clone)) < board_color_counts:
                 result1.append(tuple(clone))
             else:
-                result2.append(tuple(clone))
-    return result1 if result1 else result2
-
-            
+                clone_distance = get_max_distance(clone)
+                if clone_distance < board_distance:
+                    heappush(result2, (clone_distance, tuple(clone)))
+                else:
+                    result3.append(tuple(clone))
+    if result1:
+        return result1
+    elif result2:
+        res = []
+        while result2:
+            d, clone = heappop(result2)
+            res.append(clone)
+        return res    
+    else:
+        return result3
 
 def get_color_counts(board):
     color_counts = {}
@@ -154,11 +187,29 @@ def search(root, max_g=None):
     queue = [(0, 0, tuple(root), None)]
     closed_set = {}
     enqueued = set()
-    current_depth = 0
+    current_depth = -1
+    evaluated = 0
+
+#    moves = get_moves(list(root))
+#    i = 0
+#    print_board_color
+#    for m in moves:
+#        print_board_color(m)
+#        print(i)
+#        i += 1
+#
+#    moves.insert(0, root)
+#    return 0,moves
+
+
+
     while queue:
+        evaluated += 1
         f, g, current, parent = heappop(queue)
         if g > current_depth:
+            print_board_color(current)
             print('current depth', g, 'closed set count', len(closed_set), 'queue count', len(queue))
+            print('max distance', get_max_distance(current))
             current_depth = g
         if is_game_over(current):
             result = [current]
@@ -168,6 +219,7 @@ def search(root, max_g=None):
             for board in result:
                 print_board_color(board)
             print('solution of length', len(result) - 1)
+            print('evaluated nodes', evaluated)
             result.reverse()
             return 0, result
         if current in closed_set:
@@ -182,8 +234,8 @@ def search(root, max_g=None):
             cc = len(get_color_counts(m))
             if max_g != None and cc + g > max_g:
                 continue
-            mf = (g + cc) #* 1000 + len(make_groups_list(m))
             enqueued.add(m)
+            mf = g + cc + get_max_distance(m) # + len(make_groups_list(m))
             heappush(queue, (mf, g + 1, m, current))
             
     print('solution not found')
