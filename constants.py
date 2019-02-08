@@ -25,18 +25,17 @@ for idx in range(board_size):
     adjacent = []
     row = idx // cells_per_row
     col = idx % cells_per_row
+
+    if row > 0:
+        adjacent.append(idx-cells_per_row)  #above
+    if row + 1 < cells_per_column:
+        adjacent.append(idx+cells_per_row)  #below
+
     if row % 2 == col % 2:  #gt
         if col > 0:
             adjacent.append(idx-1)  #left neighbor
-        if row > 0:
-            adjacent.append(idx-cells_per_row)  #above
-        if row + 1 < cells_per_column:
-            adjacent.append(idx+cells_per_row)  #below
     else:   #lt
-        if row > 0:
-            adjacent.append(idx-cells_per_row)  #above
         if col + 1 < cells_per_row: #right neighbor
             adjacent.append(idx+1)
-        if row + 1 < cells_per_column:  #below
-            adjacent.append(idx+cells_per_row)
+            
     neighbors.append(adjacent)
